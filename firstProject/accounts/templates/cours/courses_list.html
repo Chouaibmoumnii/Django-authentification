@@ -1,0 +1,161 @@
+<style>
+    /* Container for the course list */
+    .course-list-container {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 20px;
+    }
+
+    /* Title styling */
+    .course-list-title {
+        font-size: 2.5em;
+        text-align: center;
+        color: #2C3E50;
+        margin-bottom: 40px;
+        font-family: 'Montserrat', sans-serif;
+    }
+
+    /* Grid layout for courses */
+    .courses-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+        gap: 20px;
+        padding: 0;
+        list-style: none;
+    }
+
+    /* Course card design */
+    .course-card {
+        background-color: #fff;
+        border-radius: 15px;
+        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+        overflow: hidden;
+        transition: transform 0.3s ease, box-shadow 0.3s ease;
+    }
+
+    .course-card:hover {
+        transform: translateY(-10px);
+        box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2);
+    }
+
+    /* Content inside the card */
+    .course-card-content {
+        padding: 20px;
+    }
+
+    /* Course title */
+    .course-title {
+        font-size: 1.5em;
+        color: #2980B9;
+        margin-bottom: 10px;
+        font-family: 'Roboto', sans-serif;
+    }
+
+    /* Speciality and Level */
+    .course-specialites, .course-niveau {
+        font-size: 1em;
+        color: #7F8C8D;
+        font-family: 'Open Sans', sans-serif;
+    }
+
+    /* Responsive adjustments */
+    @media (max-width: 768px) {
+        .courses-grid {
+            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+        }
+    }
+
+    /* Styling for header section with buttons */
+    .header-buttons {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        margin-bottom: 40px;
+    }
+
+    .header-buttons button {
+        margin: 0 20px;
+    }
+
+    .header-buttons h3 {
+        margin: 0;
+        font-family: 'Montserrat', sans-serif;
+        font-size: 1.8em;
+    }
+</style>
+
+<div class="course-list-container">
+    <!-- Header section with buttons -->
+    <div class="header-buttons">
+        <button  style="background-color: #0056b3;
+        transition: background-color 0.3s ease;
+        border: none;
+        padding: 10px 20px;
+        border-radius: 5px;
+        font-size: 1rem;
+        color:#000;
+        ">
+            <a href="{% url 'dashboard' %}" style="color: white" >Dashboard</a>
+        </button>
+
+        <h3>Liste des Cours</h3>
+
+        <button  style="background-color: #e52753;
+        transition: background-color 0.3s ease;
+        border: none;
+        padding: 10px 20px;
+        border-radius: 5px;
+        font-size: 1rem;
+         ">
+            <a href="{% url 'courses_add' %}" style="color: white" >Ajouter Cours</a>
+        </button>
+    </div>
+
+    <!-- Grid for course cards -->
+    <div class="courses-grid">
+        {% for course in courses %}
+        <div class="course-card">
+            <div class="course-card-content">
+                <p class="course-title">
+                    {% if course.image %}
+                    <img src="{{ course.image.url }}" alt="image" width="300" height="200">
+                    {% else %}
+                    <img src="https://mdbootstrap.com/img/Photos/new-templates/bootstrap-login-form/draw2.png" alt="Avatar" class="rounded-circle border border-secondary" width="150" height="150">
+                    {% endif %}
+                </p>
+                <h2 class="course-title">{{ course.title }}</h2>
+                <p class="course-specialites">{{ course.specialites }}</p>
+                <p class="course-niveau">Niveau : {{ course.niveau }}</p>
+
+                {% if course.pdf %}
+                <div class="header-buttons">
+                    <button  style="background-color: #0056b3;
+                        transition: background-color 0.3s ease;
+                        border: none;
+                        padding: 10px 20px;
+                        border-radius: 5px;
+                        font-size: 1rem;
+                        color:#eee8e8;
+                    ">
+                    <a style="color: white" href="{{ course.pdf.url }}" >Télécharger le PDF</a>
+                </button>
+                </div>
+                {% else %}
+                <div class="header-buttons">
+                    <button  style="background-color: #8f0e0e;
+                        transition: background-color 0.3s ease;
+                        border: none;
+                        padding: 10px 20px;
+                        border-radius: 5px;
+                        font-size: 1rem;
+                        color:#eee8e8;
+                    ">
+                    Pas de PDF
+                </button>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>

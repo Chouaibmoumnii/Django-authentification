@@ -12,8 +12,13 @@ urlpatterns = [
         views.update_password,
         name="update_password",
     ),
-    path('profile', views.profile, name='profile'),
-    path('update_profile', views.update_profile, name='update_profile'),
+    path('profile', views.update_profile, name='profile'),
+    path('courses-recommend', views.recommend_courses, name='courses'),
+    path('course', views.courses_list, name='courses_list'),
+    path('courses-add', views.add_course, name='courses_add'),
+    path('cours/<int:course_id>/participer/', views.participer_cours, name='participer_cours'),
+    path('cours-participer', views.mes_cours_participes, name='mes_cours_participes'),
+
 
 
 

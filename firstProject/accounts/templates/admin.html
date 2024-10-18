@@ -44,22 +44,25 @@
                     <p class="text-center"><b>{{ user.email }}</b></p>
 
                     <div class="mx-1 mx-md-4" >
-
-  
-                      <div
-                        class="d-flex justify-content-center mx-4 mb-3 mb-lg-4"
-                      >
-
-                      <button type="submit" class="btn btn-secandry btn-lg">
-                        
-                        <a href="{% url 'profile' %}">profile</a>
-                      </button>
-                        <button type="submit" class="btn btn-primary btn-lg">
-                        
-                          <a class="dropdown-item" href="{% url 'log_out' %}">Logout</a>
+                      <div class="d-flex justify-content-center mx-4 mb-3 mb-lg-4">
+                        <button  class="btn btn-secondary btn-lg m-3">
+                          <a href="{% url 'profile' %}">profile</a>
+                        </button>
+                        <button class="btn btn-primary  btn-lg m-3" >
+                          <a class="text-white" href="{% url 'log_out' %}">Logout</a>
+                        </button>
+                        <button  class="btn btn-success btn-lg m-3">
+                          <a  class="text-white"  href="{% url 'courses' %}">Cours recommander</a>
+                        </button>
+                        <button  class="btn btn-danger btn-lg m-3">
+                          <a  class="text-white"  href="{% url 'courses_add' %}">Ajouter Cours</a>
+                        </button>
+                        <button  class="btn btn-dark btn-lg m-3">
+                          <a  class="text-white"  href="{% url 'mes_cours_participes' %}">Cours Participé</a>
                         </button>
                       </div>
                     </div>
+
                   </div>
                 
                 </div>

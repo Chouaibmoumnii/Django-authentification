@@ -15,7 +15,24 @@ from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
 from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError
 import codecs
-from .models import CustomUser 
+from .models import CustomUser
+from django.db import IntegrityError
+from django.http import HttpResponseForbidden
+from django.contrib import messages
+from .models import Course
+from .forms import CourseForm
+from .models import UserLoginAttempt
+from django.db import models
+from django.utils import timezone
+from django.conf import settings
+from datetime import timedelta
+from django.db.models import Count
+from django.shortcuts import get_object_or_404
+from django.urls import reverse
+from .models import CoursParticiperParUser
+
+
+
 
 def signup(request):
     error = False
@@ -29,7 +46,6 @@ def signup(request):
         diplomes = request.POST.get('diplomes', None)
 
 
-        # Validation
         if not error and password != repassword:
             error = True
             message = "Les deux mots de passe ne correspondent pas!"
@@ -60,28 +76,53 @@ def signup(request):
     return render(request, 'accounts/signup.html', context)
 
 def signin(request):
-    error = False
-    message = ""
-    
     if request.method == "POST":
-        email = request.POST.get('email', None)
-        password = request.POST.get('password', None)
+        email = request.POST.get('email')
+        password = request.POST.get('password')
 
         user = CustomUser.objects.filter(email=email).first()
-        
+
         if user:
             auth_user = authenticate(username=user.username, password=password)
             if auth_user:
+                UserLoginAttempt.objects.create(user=user, ip_address=request.META['REMOTE_ADDR'], successful=True)
                 login(request, auth_user)
                 return redirect('dashboard')
             else:
-                error = True
-                message = "Mot de passe incorrect. Veuillez réessayer."
-        else:
-            error = True
-            message = f"Aucun utilisateur trouvé avec l'email {email}."
+                UserLoginAttempt.objects.create(user=user, ip_address=request.META['REMOTE_ADDR'], successful=False)
+                messages.error(request, "Mot de passe incorrect. Veuillez réessayer.")
 
-    return render(request, 'accounts/login.html', {'error': error, 'message': message})
+                failed_attempts = UserLoginAttempt.objects.filter(user=user, successful=False).count()
+                if failed_attempts >= 3:
+                    print("Anomaly detected, calling notify_user")
+                    notify_user(user.email)
+                    messages.error(request, "Trop de tentatives de connexion infructueuses. Veuillez réessayer plus tard.")
+
+        else:
+            messages.error(request, f"Aucun utilisateur trouvé avec l'email {email}.")
+
+    return render(request, 'accounts/login.html')
+
+def notify_user(email):
+    subject = 'Alerte de sécurité : Anomalie de connexion détectée'
+    message = 'Nous avons détecté une activité suspecte sur votre compte. Veuillez vérifier votre compte.'
+    from_email = settings.DEFAULT_FROM_EMAIL
+    email_message = EmailMessage(subject, message, from_email, [email])
+    try:
+        email_message.send()
+        print(f"E-mail envoyé avec succès à {email}")
+    except Exception as e:
+        print(f"Erreur lors de l'envoi de l'e-mail : {e}")
+
+def check_anomalies(user):
+    time_threshold = timezone.now() - timedelta(hours=1)
+    suspicious_logins = UserLoginAttempt.objects.filter(user=user, successful=False, timestamp__gte=time_threshold).annotate(
+        attempt_count=Count('id')
+    ).filter(attempt_count__gt=2)
+
+    for attempt in suspicious_logins:
+        print(f"Anomalie détectée pour l'utilisateur {attempt.user.email}, envoi d'un email...")
+        notify_user(attempt.user.email)
 
 @login_required(login_url='signin')
 def dashboard(request):
@@ -181,7 +222,6 @@ def profile(request):
         name = request.POST.get('name')
         email = request.POST.get('email')
         
-        # Validation de l'email
         try:
             validate_email(email)
             user.email = email
@@ -189,7 +229,6 @@ def profile(request):
             error = True
             message = "Veuillez entrer un email valide."
         
-        # Mettre à jour le nom
         if not error:
             user.username = name
             user.save()
@@ -212,28 +251,24 @@ def update_profile(request):
         diplomes = request.POST.get('diplomes')
         experience = request.POST.get('experience')
         specialite = request.POST.get('specialite')
-        avatar = request.FILES.get('avatar', None)  # Gestion de l'avatar
+        avatar = request.FILES.get('avatar', None)
 
-        # Vérification que le nom n'est pas vide
         if not name:
             error = True
             message = "Le nom ne peut pas être vide."
 
-        # Validation de l'email
         try:
             validate_email(email)
         except ValidationError:
             error = True
             message = "Veuillez entrer un email valide."
 
-        # Vérification de l'existence de l'email
         if not error:
             existing_user = CustomUser.objects.filter(email=email).exclude(id=user.id).first()
             if existing_user:
                 error = True
                 message = "Cet email est déjà utilisé par un autre utilisateur."
 
-        # Mise à jour des informations utilisateur
         if not error:
             try:
                 user.username = name
@@ -244,7 +279,7 @@ def update_profile(request):
                 user.specialite = specialite
 
                 if avatar:
-                    user.avatar = avatar  # Mise à jour de l'avatar si un nouveau est fourni
+                    user.avatar = avatar
 
                 user.save()
                 success = True
@@ -261,3 +296,78 @@ def update_profile(request):
         'message': message
     }
     return render(request, 'accounts/profile.html', context)
+
+
+
+
+@login_required(login_url='signin')
+def add_course(request):
+    if request.method == 'POST':
+        form = CourseForm(request.POST, request.FILES)
+        if form.is_valid():
+            form.save()
+            return redirect('courses_list')
+    else:
+        form = CourseForm()
+
+    return render(request, 'cours/add_course.html', {'form': form})
+
+@login_required(login_url='signin')
+def courses_list(request):
+    courses = Course.objects.all()
+    return render(request, 'cours/courses_list.html', {'courses': courses})
+
+
+
+@login_required(login_url='signin')
+def recommend_courses(request):
+    user = request.user
+    recommended_courses = Course.objects.filter(
+        specialites=user.specialite,
+        niveau=user.experience
+    )
+    if not recommended_courses.exists():
+        recommended_courses = Course.objects.filter(
+            niveau=user.experience
+        )
+
+    user_participations = CoursParticiperParUser.objects.filter(user=user).values_list('course_id', flat=True)
+    for course in recommended_courses:
+        course.already_participated = course.id in user_participations
+
+    context = {
+        'recommended_courses': recommended_courses,
+        'user': user
+    }
+
+    return render(request, 'cours/suggestions.html', context)
+
+@login_required(login_url='signin')
+def participer_cours(request, course_id):
+    course = get_object_or_404(Course, id=course_id)
+    user = request.user
+
+    participation, created = CoursParticiperParUser.objects.get_or_create(user=user, course=course)
+
+    if created:
+        message = "Vous avez participé avec succès à ce cours."
+    else:
+        message = "Vous avez déjà participé à ce cours."
+
+    return redirect(reverse('courses_list'))
+
+@login_required(login_url='signin')
+def mes_cours_participes(request):
+    user = request.user
+
+    participations = CoursParticiperParUser.objects.filter(user=user)
+
+    cours_participes = [participation.course for participation in participations]
+
+    context = {
+        'cours_participes': cours_participes,
+    }
+
+    return render(request, 'cours/mes_cours_participes.html', context)
+
+

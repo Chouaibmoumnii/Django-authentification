@@ -40,17 +40,13 @@
                   <h2 class="text-uppercase text-center mb-5">
                     Login
                   </h2>
-                  {% if error %}
-								<div class="alert alert-danger" role="alert" data-mdb-color="danger">
-								{{ message }}
-								</div>
-								{% endif %}
-
-								{% if success %}
-								<div class="alert alert-success" role="alert" data-mdb-color="success">
-								{{ message }}
-								</div>
-								{% endif %}
+                  {% if messages %}
+                  {% for message in messages %}
+                  <div class="alert alert-danger" role="alert" data-mdb-color="danger">
+                    {{ message }}
+                  </div>
+                  {% endfor %}
+                  {% endif %}
 
                   <form action="{% url 'signin' %}" method="POST">
                     {% csrf_token %}
