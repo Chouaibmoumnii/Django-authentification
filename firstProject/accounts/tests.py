@@ -49,10 +49,8 @@ class SigninViewTests(TestCase):
                 'password': 'wrongpassword'
             })
 
-        # Check if notify_user was called once
         self.assertEqual(mock_notify.call_count, 1)
         self.assertEqual(response.status_code, 200)
-        # Check for the message indicating too many failed attempts
         self.assertIn("Trop de tentatives de connexion infructueuses. Veuillez réessayer plus tard.", response.content.decode('utf-8'))
         mock_notify.assert_called_once_with('test@example.com')
         self.assertEqual(UserLoginAttempt.objects.filter(user=self.user).count(), 3)
